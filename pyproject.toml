@@ -11,8 +11,8 @@ dependencies = [
 ]
 
 [project.urls]
-Homepage = "https://github.com/<your>/st-error-boundary"
-Repository = "https://github.com/<your>/st-error-boundary"
+Homepage = "https://github.com/K-dash/st-error-boundary"
+Repository = "https://github.com/K-dash/st-error-boundary"
 
 [build-system]
 requires = ["hatchling>=1.25"]
