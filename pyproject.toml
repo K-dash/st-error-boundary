@@ -1,0 +1,62 @@
+[project]
+name = "st-error-boundary"
+version = "0.1.0"
+description = "A tiny, typed error-boundary decorator for Streamlit apps (UI-safe fallback + pluggable hooks)"
+readme = "README.md"
+requires-python = ">=3.12"
+license = { text = "MIT" }
+authors = [{ name = "yuki" }]
+dependencies = [
+    "streamlit>=1.30",
+]
+
+[project.urls]
+Homepage = "https://github.com/<your>/st-error-boundary"
+Repository = "https://github.com/<your>/st-error-boundary"
+
+[build-system]
+requires = ["hatchling>=1.25"]
+build-backend = "hatchling.build"
+
+
+[tool.ruff]
+target-version = "py312"
+line-length = 120
+extend-exclude = ["dist", ".venv"]
+
+[tool.ruff.lint]
+select = ["ALL"]
+ignore = [
+    "D203",    # one-blank-line-before-class (conflicts with D211)
+    "D213",    # multi-line-summary-second-line (conflicts with D212)
+    "COM812",  # Trailing comma missing (conflicts with formatter)
+    "ISC001",  # Implicit string concatenation (conflicts with formatter)
+    "TC003",   # Move stdlib import into TYPE_CHECKING block (too strict for runtime protocols)
+    "SIM105",  # Use contextlib.suppress (explicit try-except is clearer here)
+]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/*" = ["S101", "ANN", "D", "INP001"]  # Allow assert, skip annotations, docstrings, and implicit namespace in tests
+"examples/*" = ["D", "INP001", "T201"]  # Skip docstrings, implicit namespace, and print in examples
+"main.py" = ["D", "T201"]  # Skip docstrings and print in main.py
+
+[tool.mypy]
+python_version = "3.12"
+strict = true
+warn_unreachable = true
+warn_unused_ignores = true
+mypy_path = ["src"]
+
+[tool.pyright]
+typeCheckingMode = "strict"
+pythonVersion = "3.12"
+venvPath = "."
+include = ["src", "tests", "examples"]
+
+[dependency-groups]
+dev = [
+    "mypy>=1.18.2",
+    "pyright>=1.1.406",
+    "pytest>=8.4.2",
+    "ruff>=0.13.3",
+]
