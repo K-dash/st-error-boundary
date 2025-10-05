@@ -16,6 +16,13 @@ This library solves the problem with the **decorator pattern**: a single "last l
 
 This pattern is extracted from production use and open-sourced to help others build robust Streamlit applications without sacrificing code clarity. For the full architectural context, see the [PyConJP 2025 presentation](https://speakerdeck.com/kdash/streamlit-hashe-nei-turudakeziyanai-poc-nosu-sadeshi-xian-surushang-yong-pin-zhi-nofen-xi-saas-akitekutiya).
 
+In **customer-facing and regulated** environments, an unhandled exception that leaks internals isn’t just noisy—it can be a business incident. You want **no stack traces in the UI**, but **rich, sanitized telemetry** behind the scenes.
+
+## Who is this for?
+
+Teams shipping **customer-facing** Streamlit apps (B2B/B2C, regulated or enterprise settings) where you want **no stack traces in the UI**, but **rich telemetry** in your logs/alerts. The boundary provides a **consistent, user-friendly fallback** while `on_error` sends **sanitized** details to your observability stack.
+
+
 ## Features
 
 - **Minimal API**: Just two required arguments (`on_error` and `fallback`)
