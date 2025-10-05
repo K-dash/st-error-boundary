@@ -5,7 +5,7 @@ description = "A tiny, typed error-boundary decorator for Streamlit apps (UI-saf
 readme = "README.md"
 requires-python = ">=3.12"
 license = { text = "MIT" }
-authors = [{ name = "yuki" }]
+authors = [{ name = "K-dash" }]
 dependencies = [
     "streamlit>=1.30",
 ]
