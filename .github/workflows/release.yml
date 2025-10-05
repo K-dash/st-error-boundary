@@ -43,6 +43,6 @@ jobs:
         run: uv build
 
       - name: Publish to PyPI
-        uses: pypa/gh-action-pypi-publish@1a6613f60767b49d6bd21e265f8f333c5f584156 # v1.13.0
+        uses: pypa/gh-action-pypi-publish@release/v1
         with:
           print-hash: true
