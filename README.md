@@ -4,9 +4,11 @@ A minimal, type-safe error boundary library for Streamlit applications with plug
 
 ## Motivation
 
-Streamlit excels at PoC speed, but bridging the gap to commercial quality requires addressing robustness and security. One critical challenge is preventing sensitive data leakage through unhandled exception tracebacks. This library provides the **last line of defense** exception handling pattern, extracted from production use at [Recustomer](https://www.recustomer.jp/), where it has been running incident-free since launch. By open-sourcing this pattern, we aim to help others facing the same challenge of building commercial-grade Streamlit applications without sacrificing development speed.
+Streamlit's default behavior displays detailed stack traces in the browser when exceptions occur. While `client.showErrorDetails = "none"` prevents information leakage, it shows only generic error messages, leaving users confused. The typical solution—scattering `st.error()` and `st.stop()` calls throughout your code—**severely degrades readability and maintainability**, and creates a risk of **forgetting exception handling** in critical places.
 
-For the full architectural context, see the [PyConJP 2025 presentation](https://speakerdeck.com/kdash/streamlit-hashe-nei-turudakeziyanai-poc-nosu-sadeshi-xian-surushang-yong-pin-zhi-nofen-xi-saas-akitekutiya).
+This library solves the problem with the **decorator pattern**: a single "last line of defense" decorator that separates exception handling (cross-cutting concern) from business logic. Just decorate your main function, and all unhandled exceptions are caught and displayed with user-friendly messages—no need to pollute your code with error handling boilerplate everywhere.
+
+This pattern is extracted from production use and open-sourced to help others build robust Streamlit applications without sacrificing code clarity. For the full architectural context, see the [PyConJP 2025 presentation](https://speakerdeck.com/kdash/streamlit-hashe-nei-turudakeziyanai-poc-nosu-sadeshi-xian-surushang-yong-pin-zhi-nofen-xi-saas-akitekutiya).
 
 ## Features
 
