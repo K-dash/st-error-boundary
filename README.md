@@ -166,6 +166,14 @@ def custom_fallback(exc: Exception) -> None:
 boundary = ErrorBoundary(on_error=lambda _: None, fallback=custom_fallback)
 ```
 
+## Important Notes
+
+### Callback Error Rendering Position
+
+When using `wrap_callback()`, errors in widget callbacks (`on_click`, `on_change`) are rendered at the **top of the page** instead of near the widget. This is a Streamlit architectural limitation.
+
+**Workaround**: Use the **deferred rendering pattern** to control error position. See [Callback Rendering Position Guide](docs/callback-rendering-position.md) for details.
+
 ## Development
 
 ```bash

@@ -40,8 +40,8 @@ test:
 
 check: lint type test
 
-example:
-	uv run streamlit run examples/minimal_app.py
+demo:
+	uv run streamlit run examples/demo.py
 
 clean:
 	rm -rf dist build *.egg-info
