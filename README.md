@@ -1,6 +1,6 @@
 [![CI](https://github.com/K-dash/st-error-boundary/actions/workflows/ci.yml/badge.svg)](https://github.com/K-dash/st-error-boundary/actions/workflows/ci.yml)
 [![Python versions](https://img.shields.io/pypi/pyversions/st-error-boundary.svg)](https://pypi.org/project/st-error-boundary/)
-[![codecov](https://codecov.io/gh/K-dash/st-error-boundary/graph/badge.svg?token=nhDsSbTkaJ)](https://codecov.io/gh/K-dash/st-error-boundary)
+[![codecov](https://codecov.io/gh/K-dash/st-error-boundary/branch/feat%2Frelease-0.1.4/graph/badge.svg?token=nhDsSbTkaJ)](https://codecov.io/gh/K-dash/st-error-boundary)
 
 # st-error-boundary
 
