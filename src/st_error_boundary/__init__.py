@@ -2,6 +2,16 @@
 
 from __future__ import annotations
 
-from .error_boundary import ErrorHook, FallbackRenderer, error_boundary
+from .error_boundary import (
+    ErrorBoundary,
+    ErrorHook,
+    FallbackRenderer,
+    error_boundary,
+)
 
-__all__ = ["ErrorHook", "FallbackRenderer", "error_boundary"]
+__all__ = [
+    "ErrorBoundary",
+    "ErrorHook",
+    "FallbackRenderer",
+    "error_boundary",
+]

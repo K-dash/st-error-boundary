@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import streamlit as st
 
-from st_error_boundary import error_boundary
+from st_error_boundary import ErrorBoundary
 
 
 def audit(_: Exception) -> None:
@@ -17,14 +17,27 @@ def fallback_ui(_: Exception) -> None:
         st.rerun()
 
 
-@error_boundary(on_error=audit, fallback=fallback_ui)
+# Create ErrorBoundary instance with shared configuration
+boundary = ErrorBoundary(on_error=audit, fallback=fallback_ui)
+
+
+def trigger_error_callback() -> None:
+    """Callback that raises an error - protected by wrap_callback."""
+    _ = 1 / 0
+
+
+@boundary.decorate
 def main() -> None:
     st.title("st-error-boundary demo")
 
-    def trigger_error() -> None:
+    st.subheader("Protected button click (if statement)")
+    if st.button("Trigger Error (Direct)"):
+        # This error is caught by @boundary.decorate
         _ = 1 / 0
 
-    st.button("Trigger Error", on_click=trigger_error)
+    st.subheader("Protected callback (on_click)")
+    # This error is caught by boundary.wrap_callback
+    st.button("Trigger Error (Callback)", on_click=boundary.wrap_callback(trigger_error_callback))
 
 
 if __name__ == "__main__":

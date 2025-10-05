@@ -1,10 +1,10 @@
-"""Error boundary decorator for Streamlit applications."""
+"""Error boundary for Streamlit applications."""
 
 from __future__ import annotations
 
 from collections.abc import Callable, Iterable, Sequence
 from functools import wraps
-from typing import Protocol, cast
+from typing import Protocol
 
 from .plugins import render_string_fallback
 
@@ -31,14 +31,11 @@ class FallbackRenderer(Protocol):
         ...
 
 
-def error_boundary[**P, R](
-    on_error: ErrorHook | Iterable[ErrorHook],
-    fallback: str | FallbackRenderer,
-) -> Callable[[Callable[P, R]], Callable[P, R | None]]:
-    """Minimal decorator that catches unhandled exceptions and displays safe fallback UI.
+class ErrorBoundary:
+    """Error boundary with pluggable hooks and safe fallback UI.
 
-    This decorator acts as the "last resort" error boundary, preventing uncaught
-    exceptions from exposing sensitive information in the UI.
+    This class provides a centralized way to handle errors in Streamlit applications,
+    supporting both decorated functions and widget callbacks (on_click, on_change, etc.).
 
     Args:
         on_error: Single hook or iterable of hooks for side effects (audit logging,
@@ -48,48 +45,139 @@ def error_boundary[**P, R](
             it will be automatically passed to Streamlit's `st.error()` function
             to display the error message.
 
-    Returns:
-        Decorator function that returns the original result on success, or None
-        when an exception occurs.
-
     Example:
-        >>> @error_boundary(
+        >>> boundary = ErrorBoundary(
         ...     on_error=lambda e: print(f"Error: {e}"),
-        ...     fallback="An error occurred. Please try again later.",
+        ...     fallback="An error occurred.",
         ... )
-        ... def my_func():
-        ...     # Your code here
-        ...     pass
+        >>> @boundary.decorate
+        ... def main():
+        ...     st.button("Click", on_click=boundary.wrap_callback(handler))
 
     """
-    if not callable(on_error):
-        hooks: Sequence[ErrorHook] = cast("Sequence[ErrorHook]", list(on_error))
-    else:
-        hooks = [on_error]
 
-    def _render_fallback(exc: Exception) -> None:
-        if callable(fallback):
-            fallback(exc)
+    def __init__(
+        self,
+        on_error: ErrorHook | Iterable[ErrorHook],
+        fallback: str | FallbackRenderer,
+    ) -> None:
+        """Initialize error boundary with hooks and fallback.
+
+        Args:
+            on_error: Single hook or iterable of hooks. str/bytes are rejected.
+            fallback: String or custom renderer for fallback UI.
+
+        """
+        # Filter out str/bytes from Iterable before list conversion
+        if callable(on_error):
+            self._hooks: Sequence[ErrorHook] = [on_error]
         else:
-            render_string_fallback(fallback)
+            # on_error is Iterable[ErrorHook] - just convert to list
+            # str/bytes would be rejected by type checker
+            self._hooks = list(on_error)
 
-    def _decorator(func: Callable[P, R]) -> Callable[P, R | None]:
+        self._fallback = fallback
+
+    def _handle_error(self, exc: Exception) -> None:
+        """Execute hooks and render fallback UI for an exception.
+
+        Args:
+            exc: The exception to handle.
+
+        """
+        # Execute all hooks, suppressing their exceptions
+        for hook in self._hooks:
+            try:
+                hook(exc)
+            except Exception:  # noqa: S110, BLE001
+                # Suppress hook failures to prevent cascading errors
+                pass
+
+        # Render fallback UI
+        if callable(self._fallback):
+            self._fallback(exc)
+        else:
+            render_string_fallback(self._fallback)
+
+    def decorate[**P, R](self, func: Callable[P, R]) -> Callable[P, R | None]:
+        """Wrap a function with error boundary.
+
+        Args:
+            func: Function to wrap with error handling.
+
+        Returns:
+            Wrapped function that returns the original result on success,
+            or None when an exception occurs.
+
+        """
+
         @wraps(func)
         def _wrapped(*args: P.args, **kwargs: P.kwargs) -> R | None:
             try:
                 return func(*args, **kwargs)
             except (KeyboardInterrupt, SystemExit):
-                raise
+                raise  # Pass through BaseException
             except Exception as exc:  # noqa: BLE001
-                for hook in hooks:
-                    try:
-                        hook(exc)
-                    except Exception:  # noqa: S110, BLE001
-                        # Suppress hook failures to prevent cascading errors
-                        pass
-                _render_fallback(exc)
+                self._handle_error(exc)
                 return None
 
         return _wrapped
 
-    return _decorator
+    def wrap_callback[**P, R](self, callback: Callable[P, R]) -> Callable[P, R | None]:
+        """Wrap a widget callback with error boundary.
+
+        This method is designed for Streamlit widget callbacks (on_click, on_change, etc.).
+        Returns the original callback's return value on success, or None if an exception
+        was caught.
+
+        Args:
+            callback: Widget callback to wrap with error handling.
+
+        Returns:
+            Wrapped callback that returns the original result on success,
+            or None when an exception occurs.
+
+        """
+
+        @wraps(callback)
+        def _wrapped(*args: P.args, **kwargs: P.kwargs) -> R | None:
+            try:
+                return callback(*args, **kwargs)  # Return original value
+            except (KeyboardInterrupt, SystemExit):
+                raise  # Pass through BaseException
+            except Exception as exc:  # noqa: BLE001
+                self._handle_error(exc)
+                return None  # Only None on exception
+
+        return _wrapped
+
+
+def error_boundary[**P, R](
+    on_error: ErrorHook | Iterable[ErrorHook],
+    fallback: str | FallbackRenderer,
+) -> Callable[[Callable[P, R]], Callable[P, R | None]]:
+    """Create error boundary decorator (legacy API).
+
+    .. deprecated::
+        Use ErrorBoundary class instead for better callback support.
+        This function only protects the decorated function,
+        not widget callbacks (on_click, on_change, etc.).
+
+    Args:
+        on_error: Single hook or iterable of hooks for side effects.
+        fallback: String or custom renderer for fallback UI.
+
+    Returns:
+        Decorator function that returns the original result on success,
+        or None when an exception occurs.
+
+    Example:
+        >>> @error_boundary(
+        ...     on_error=lambda e: print(f"Error: {e}"),
+        ...     fallback="An error occurred.",
+        ... )
+        ... def my_func():
+        ...     pass
+
+    """
+    return ErrorBoundary(on_error, fallback).decorate

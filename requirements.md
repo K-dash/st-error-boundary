@@ -1,4 +1,4 @@
-# Streamlit 用「最後の砦」エラーバウンダリ — コア API 仕様（最小版・必須引数2つ）
+# Streamlit 用「最後の砦」エラーバウンダリ — コア API 仕様（ErrorBoundary クラス版）
 
 ## 1. 概要
 
@@ -8,6 +8,7 @@
   * **何を"する"**（副作用）＝ `on_error`
   * **何を"見せる"**（UI）＝ `fallback`
     この2点のみを**必須**にし、APIを最小化。
+* **コールバック対応**：Streamlit の `on_click` / `on_change` コールバックもエラーバウンダリで保護可能。
 * **前提**：`client.showErrorDetails="none"` 等のグローバル表示ポリシーと**併存**可能（境界が貼られた範囲では `fallback` を優先）。
 
 ---
@@ -50,31 +51,47 @@ class FallbackRenderer(Protocol):
     def __call__(self, exc: Exception, /) -> None: ...
 ```
 
-### 4.2 関数シグネチャ
+### 4.2 ErrorBoundary クラス
 
 ```python
 from __future__ import annotations
 
 from collections.abc import Callable, Iterable
-from functools import wraps
-from typing import ParamSpec
 
-import streamlit as st
+class ErrorBoundary:
+    """エラーバウンダリの中心クラス。
 
-P = ParamSpec("P")
+    on_error と fallback を一箇所で定義し、
+    デコレータとコールバックラッパーの両方で使用可能。
+    """
 
-def error_boundary[P, R](
-    on_error: ErrorHook | Iterable[ErrorHook],
-    fallback: str | FallbackRenderer,
-) -> Callable[[Callable[P, R]], Callable[P, R | None]]:
-    ...
+    def __init__(
+        self,
+        on_error: ErrorHook | Iterable[ErrorHook],
+        fallback: str | FallbackRenderer,
+    ) -> None:
+        ...
+
+    def decorate[**P, R](
+        self, func: Callable[P, R]
+    ) -> Callable[P, R | None]:
+        """関数をエラーバウンダリでラップ"""
+        ...
+
+    def wrap_callback[**P, R](
+        self, callback: Callable[P, R]
+    ) -> Callable[P, R | None]:
+        """ウィジェットコールバック（on_click等）をラップ"""
+        ...
 ```
 
 * **必須引数**：
 
   * `on_error`：単体または複数フック。**副作用**（監査・通知・計測など）を好きに差し込む。
   * `fallback`：文字列（同梱プラグインが `st.error("<固定文言>")` を実行）**または**関数（**自由UI**）。
-* **戻り**：デコレータ（`Callable[P, R] -> Callable[P, R|None]`）
+* **メソッド**：
+  * `.decorate(func)`：関数デコレータとして使用
+  * `.wrap_callback(callback)`：on_click / on_change コールバックをラップ
 
 ---
 
@@ -167,21 +184,32 @@ def error_boundary[P, R](
 
 ## 7. 使い方（実例）
 
-### 7.1 固定文言だけ（最小）
-
-```python
-@error_boundary(
-    on_error=lambda e: print({"event": "unhandled", "error": str(e)}),
-    fallback="問題が発生しました。時間をおいて再度お試しください。",
-)
-def main() -> None:
-    ...
-```
-
-### 7.2 問い合わせ導線つき UI ＋ 複数フック
+### 7.1 基本的な使い方
 
 ```python
 import streamlit as st
+from st_error_boundary import ErrorBoundary
+
+# ErrorBoundary インスタンスを作成
+boundary = ErrorBoundary(
+    on_error=lambda e: print({"event": "unhandled", "error": str(e)}),
+    fallback="問題が発生しました。時間をおいて再度お試しください。",
+)
+
+@boundary.decorate
+def main() -> None:
+    st.title("My App")
+
+    # デコレータで保護されたエラー
+    if st.button("Trigger Error"):
+        raise ValueError("Something went wrong")
+```
+
+### 7.2 コールバックも保護（on_click / on_change）
+
+```python
+import streamlit as st
+from st_error_boundary import ErrorBoundary
 from datetime import datetime
 
 def audit(exc: Exception, /) -> None:
@@ -197,9 +225,23 @@ def fallback_ui(_: Exception, /) -> None:
     if st.button("再試行"):
         st.rerun()
 
-@error_boundary(on_error=[audit, notify], fallback=fallback_ui)
-def render_heavy_section() -> None:
-    ...
+# 単一の ErrorBoundary インスタンスで設定を一元管理
+boundary = ErrorBoundary(on_error=[audit, notify], fallback=fallback_ui)
+
+def handle_click() -> None:
+    # コールバック内のエラー
+    result = 1 / 0
+
+@boundary.decorate
+def main() -> None:
+    st.title("My App")
+
+    # if 文内のエラー（デコレータで保護）
+    if st.button("Direct Error"):
+        raise ValueError("Error in main")
+
+    # on_click コールバックのエラー（wrap_callback で保護）
+    st.button("Callback Error", on_click=boundary.wrap_callback(handle_click))
 ```
 
 ---

@@ -1,4 +1,4 @@
-"""Integration tests for error_boundary using Streamlit AppTest."""
+"""Integration tests for ErrorBoundary using Streamlit AppTest."""
 
 from __future__ import annotations
 
@@ -9,12 +9,14 @@ def test_error_boundary_catches_exception_and_shows_fallback() -> None:
     """Test that error boundary catches exceptions and displays fallback UI."""
     script = """
 import streamlit as st
-from st_error_boundary import error_boundary
+from st_error_boundary import ErrorBoundary
 
-@error_boundary(
+boundary = ErrorBoundary(
     on_error=lambda _: None,
     fallback="An error occurred. Please try again.",
 )
+
+@boundary.decorate
 def main() -> None:
     st.title("Test App")
     if st.button("Trigger Error"):
@@ -44,13 +46,15 @@ def test_error_boundary_with_custom_fallback_ui() -> None:
     """Test error boundary with custom fallback UI renderer."""
     script = """
 import streamlit as st
-from st_error_boundary import error_boundary
+from st_error_boundary import ErrorBoundary
 
 def custom_fallback(_: Exception) -> None:
     st.error("Custom error message")
     st.warning("Additional context")
 
-@error_boundary(on_error=lambda _: None, fallback=custom_fallback)
+boundary = ErrorBoundary(on_error=lambda _: None, fallback=custom_fallback)
+
+@boundary.decorate
 def main() -> None:
     st.title("Test App")
     if st.button("Trigger Error"):
@@ -78,7 +82,7 @@ def test_error_boundary_hook_is_called() -> None:
     """Test that error hooks are called when exception occurs."""
     script = """
 import streamlit as st
-from st_error_boundary import error_boundary
+from st_error_boundary import ErrorBoundary
 
 if "hook_called" not in st.session_state:
     st.session_state.hook_called = False
@@ -86,7 +90,9 @@ if "hook_called" not in st.session_state:
 def hook(_: Exception) -> None:
     st.session_state.hook_called = True
 
-@error_boundary(on_error=hook, fallback="Error occurred")
+boundary = ErrorBoundary(on_error=hook, fallback="Error occurred")
+
+@boundary.decorate
 def main() -> None:
     st.title("Test App")
     if st.button("Trigger Error"):
@@ -114,9 +120,11 @@ def test_error_boundary_normal_execution() -> None:
     """Test that error boundary doesn't interfere with normal execution."""
     script = """
 import streamlit as st
-from st_error_boundary import error_boundary
+from st_error_boundary import ErrorBoundary
 
-@error_boundary(on_error=lambda _: None, fallback="Error occurred")
+boundary = ErrorBoundary(on_error=lambda _: None, fallback="Error occurred")
+
+@boundary.decorate
 def main() -> None:
     st.title("Test App")
     st.write("Normal execution")
@@ -148,7 +156,7 @@ def test_error_boundary_with_retry_button() -> None:
     """Test error boundary with retry functionality in fallback."""
     script = """
 import streamlit as st
-from st_error_boundary import error_boundary
+from st_error_boundary import ErrorBoundary
 
 if "attempts" not in st.session_state:
     st.session_state.attempts = 0
@@ -159,7 +167,9 @@ def fallback_with_retry(_: Exception) -> None:
         st.session_state.attempts = 0
         st.rerun()
 
-@error_boundary(on_error=lambda _: None, fallback=fallback_with_retry)
+boundary = ErrorBoundary(on_error=lambda _: None, fallback=fallback_with_retry)
+
+@boundary.decorate
 def main() -> None:
     st.title("Test App")
     st.write(f"Attempts: {st.session_state.attempts}")
@@ -188,7 +198,7 @@ def test_multiple_hooks_in_integration() -> None:
     """Test that multiple hooks are executed in order during integration."""
     script = """
 import streamlit as st
-from st_error_boundary import error_boundary
+from st_error_boundary import ErrorBoundary
 
 if "hook_order" not in st.session_state:
     st.session_state.hook_order = []
@@ -199,7 +209,9 @@ def hook1(_: Exception) -> None:
 def hook2(_: Exception) -> None:
     st.session_state.hook_order.append("hook2")
 
-@error_boundary(on_error=[hook1, hook2], fallback="Error")
+boundary = ErrorBoundary(on_error=[hook1, hook2], fallback="Error")
+
+@boundary.decorate
 def main() -> None:
     if st.button("Trigger"):
         raise RuntimeError("error")
@@ -223,7 +235,7 @@ def test_hook_receives_exception_message() -> None:
     """Test that hooks receive the actual exception with its message."""
     script = """
 import streamlit as st
-from st_error_boundary import error_boundary
+from st_error_boundary import ErrorBoundary
 
 if "error_message" not in st.session_state:
     st.session_state.error_message = ""
@@ -231,7 +243,9 @@ if "error_message" not in st.session_state:
 def capture_error(exc: Exception) -> None:
     st.session_state.error_message = str(exc)
 
-@error_boundary(on_error=capture_error, fallback="Error occurred")
+boundary = ErrorBoundary(on_error=capture_error, fallback="Error occurred")
+
+@boundary.decorate
 def main() -> None:
     st.title("Test App")
     if st.button("Trigger"):
@@ -256,7 +270,7 @@ def test_failing_hook_suppressed_in_integration() -> None:
     """Test that failing hooks are suppressed and subsequent hooks still run."""
     script = """
 import streamlit as st
-from st_error_boundary import error_boundary
+from st_error_boundary import ErrorBoundary
 
 if "hook_results" not in st.session_state:
     st.session_state.hook_results = []
@@ -268,10 +282,12 @@ def failing_hook(_: Exception) -> None:
 def success_hook(_: Exception) -> None:
     st.session_state.hook_results.append("success_executed")
 
-@error_boundary(
+boundary = ErrorBoundary(
     on_error=[failing_hook, success_hook],
     fallback="Main error handled"
 )
+
+@boundary.decorate
 def main() -> None:
     st.title("Test App")
     if st.button("Trigger"):
