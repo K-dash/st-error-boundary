@@ -1,3 +1,4 @@
+[![CI](https://github.com/K-dash/st-error-boundary/actions/workflows/ci.yml/badge.svg)](https://github.com/K-dash/st-error-boundary/actions/workflows/ci.yml)
 [![codecov](https://codecov.io/gh/K-dash/st-error-boundary/graph/badge.svg?token=nhDsSbTkaJ)](https://codecov.io/gh/K-dash/st-error-boundary)
 
 # st-error-boundary
