@@ -57,10 +57,46 @@ pythonVersion = "3.12"
 venvPath = "."
 include = ["src", "tests", "examples"]
 
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
+addopts = [
+    "-v",
+    "--strict-markers",
+    "--strict-config",
+]
+
+[tool.coverage.run]
+source = ["src/st_error_boundary"]
+branch = true
+omit = [
+    "*/tests/*",
+    "*/examples/*",
+]
+
+[tool.coverage.report]
+exclude_lines = [
+    "pragma: no cover",
+    "def __repr__",
+    "if TYPE_CHECKING:",
+    "raise AssertionError",
+    "raise NotImplementedError",
+    "@abstractmethod",
+    "\\.\\.\\.",
+]
+show_missing = true
+precision = 2
+
+[tool.coverage.xml]
+output = "coverage.xml"
+
 [dependency-groups]
 dev = [
     "mypy>=1.18.2",
     "pyright>=1.1.406",
     "pytest>=8.4.2",
     "ruff>=0.13.3",
+    "pytest-cov>=7.0.0,<8",
 ]
