@@ -1,4 +1,4 @@
-.PHONY: all help fmt fmt-check lint type test check example clean install
+.PHONY: all help fmt fmt-check lint type test test-ci check example clean install
 
 .DEFAULT_GOAL := all
 
@@ -13,6 +13,7 @@ help:
 	@echo "  make lint      - Lint code with ruff"
 	@echo "  make type      - Type check with pyright and mypy"
 	@echo "  make test      - Run tests with pytest"
+	@echo "  make test-ci   - Run tests with coverage (for CI)"
 	@echo "  make check     - Run lint, type, and test"
 	@echo "  make example   - Run example Streamlit app"
 	@echo "  make clean     - Clean build artifacts"
@@ -37,6 +38,9 @@ type:
 
 test:
 	uv run pytest
+
+test-ci:
+	uv run pytest --cov=src/st_error_boundary --cov-report=xml --cov-report=term
 
 check: lint type test
 
