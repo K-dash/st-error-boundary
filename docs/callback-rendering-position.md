@@ -91,7 +91,7 @@ if st.session_state.callback_error:
 
 ## Complete Example
 
-See [`examples/deferred_rendering.py`](../examples/deferred_rendering.py) for a complete working example comparing direct errors and callback errors.
+See [`examples/demo.py`](../examples/demo.py) for a complete working example comparing direct errors and callback errors.
 
 ## Benefits
 
