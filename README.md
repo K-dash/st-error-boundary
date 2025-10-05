@@ -51,7 +51,7 @@ if __name__ == "__main__":
     main()
 ```
 
-**Limitation**: `on_click`/`on_change` callbacks are **not protected** with this approach.
+**⚠️ Important**: The `@boundary.decorate` decorator alone does **not** protect `on_click`/`on_change` callbacks—you must use `boundary.wrap_callback()` for those (see Advanced Usage below).
 
 ### Advanced Usage (With Callbacks)
 
@@ -119,6 +119,8 @@ ErrorBoundary(
 **Parameters:**
 - `on_error`: Single hook or list of hooks for side effects (logging, metrics, etc.)
 - `fallback`: Either a string (displayed via `st.error()`) or a callable that renders custom UI
+  - When `fallback` is a `str`, it is rendered using `st.error()` internally
+  - To customize rendering (e.g., use `st.warning()` or custom widgets), pass a `FallbackRenderer` callable instead
 
 **Methods:**
 - `.decorate(func)`: Decorator to wrap a function with error boundary
@@ -178,9 +180,45 @@ boundary = ErrorBoundary(on_error=lambda _: None, fallback=custom_fallback)
 
 ### Callback Error Rendering Position
 
+**TL;DR**: Errors in callbacks appear at the top of the page, not near the widget. Use the deferred rendering pattern (below) to control error position.
+
 When using `wrap_callback()`, errors in widget callbacks (`on_click`, `on_change`) are rendered at the **top of the page** instead of near the widget. This is a Streamlit architectural limitation.
 
-**Workaround**: Use the **deferred rendering pattern** to control error position. See [Callback Rendering Position Guide](docs/callback-rendering-position.md) for details.
+#### Deferred Rendering Pattern
+
+Store errors in `session_state` during callback execution, then render them during main script execution:
+
+```python
+import streamlit as st
+from st_error_boundary import ErrorBoundary
+
+# Initialize session state
+if "error" not in st.session_state:
+    st.session_state.error = None
+
+# Store error instead of rendering it
+boundary = ErrorBoundary(
+    on_error=lambda exc: st.session_state.update(error=str(exc)),
+    fallback=lambda _: None  # Silent - defer to main script
+)
+
+def trigger_error():
+    raise ValueError("Error in callback!")
+
+# Main app
+st.button("Click", on_click=boundary.wrap_callback(trigger_error))
+
+# Render error after the button
+if st.session_state.error:
+    st.error(f"Error: {st.session_state.error}")
+    if st.button("Clear"):
+        st.session_state.error = None
+        st.rerun()
+```
+
+**Result**: Error appears **below the button** instead of at the top.
+
+For more details, see [Callback Rendering Position Guide](docs/callback-rendering-position.md).
 
 ## Development
 

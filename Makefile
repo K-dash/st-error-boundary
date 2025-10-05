@@ -40,6 +40,8 @@ test:
 
 check: lint type test
 
+example: demo
+
 demo:
 	uv run streamlit run examples/demo.py
 
