@@ -1,3 +1,5 @@
+[![codecov](https://codecov.io/gh/K-dash/st-error-boundary/graph/badge.svg?token=nhDsSbTkaJ)](https://codecov.io/gh/K-dash/st-error-boundary)
+
 # st-error-boundary
 
 English | [日本語](README.ja.md)
