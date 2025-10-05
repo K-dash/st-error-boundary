@@ -7,7 +7,6 @@ A minimal, type-safe error boundary library for Streamlit applications with plug
 - **Minimal API**: Just two required arguments (`on_error` and `fallback`)
 - **Type-safe**: Full Python 3.12+ type hints with strict mypy/pyright checking
 - **Callback Protection**: Protect both decorated functions and widget callbacks (`on_click`, `on_change`, etc.)
-- **DRY Configuration**: Single ErrorBoundary instance manages both decorators and callbacks
 - **Pluggable Hooks**: Execute side effects (audit logging, metrics, notifications) when errors occur
 - **Safe Fallback UI**: Display user-friendly error messages instead of tracebacks
 
@@ -44,7 +43,7 @@ if __name__ == "__main__":
     main()
 ```
 
-**† Limitation**: `on_click`/`on_change` callbacks are **not protected** with this approach.
+**Limitation**: `on_click`/`on_change` callbacks are **not protected** with this approach.
 
 ### Advanced Usage (With Callbacks)
 
@@ -92,9 +91,9 @@ Streamlit executes `on_click` and `on_change` callbacks **before** the script re
 
 **Execution Flow:**
 1. User clicks button with `on_click=callback`
-2. Streamlit executes `callback()` ê **Not protected by decorator**
+2. Streamlit executes `callback()` ÔøΩ **Not protected by decorator**
 3. Streamlit reruns the script
-4. Decorated function executes ê **Protected by decorator**
+4. Decorated function executes ÔøΩ **Protected by decorator**
 
 **Solution**: Use `boundary.wrap_callback()` to explicitly wrap callbacks with the same error handling logic.
 
