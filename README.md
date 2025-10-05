@@ -91,9 +91,9 @@ Streamlit executes `on_click` and `on_change` callbacks **before** the script re
 
 **Execution Flow:**
 1. User clicks button with `on_click=callback`
-2. Streamlit executes `callback()` � **Not protected by decorator**
+2. Streamlit executes `callback()` -> **Not protected by decorator**
 3. Streamlit reruns the script
-4. Decorated function executes � **Protected by decorator**
+4. Decorated function executes -> **Protected by decorator**
 
 **Solution**: Use `boundary.wrap_callback()` to explicitly wrap callbacks with the same error handling logic.
 
