@@ -2,6 +2,12 @@
 
 A minimal, type-safe error boundary library for Streamlit applications with pluggable hooks and safe fallback UI.
 
+## Motivation
+
+Streamlit excels at PoC speed, but bridging the gap to commercial quality requires addressing robustness and security. One critical challenge is preventing sensitive data leakage through unhandled exception tracebacks. This library provides the **last line of defense** exception handling pattern, extracted from production use at [Recustomer](https://www.recustomer.jp/), where it has been running incident-free since launch. By open-sourcing this pattern, we aim to help others facing the same challenge of building commercial-grade Streamlit applications without sacrificing development speed.
+
+For the full architectural context, see the [PyConJP 2025 presentation](https://speakerdeck.com/kdash/streamlit-hashe-nei-turudakeziyanai-poc-nosu-sadeshi-xian-surushang-yong-pin-zhi-nofen-xi-saas-akitekutiya).
+
 ## Features
 
 - **Minimal API**: Just two required arguments (`on_error` and `fallback`)
