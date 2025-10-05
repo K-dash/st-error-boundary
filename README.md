@@ -1,5 +1,7 @@
 # st-error-boundary
 
+English | [日本語](README.ja.md)
+
 A minimal, type-safe error boundary library for Streamlit applications with pluggable hooks and safe fallback UI.
 
 ## Motivation
