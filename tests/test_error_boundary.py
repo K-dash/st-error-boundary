@@ -310,3 +310,77 @@ def test_wrap_callback_preserves_metadata() -> None:
     wrapped = boundary.wrap_callback(my_callback)
     assert wrapped.__name__ == "my_callback"
     assert wrapped.__doc__ == "Callback docstring."
+
+
+# ============================================================================
+# Runtime validation tests
+# ============================================================================
+
+
+def test_on_error_rejects_str_iterable() -> None:
+    """Test that str is rejected as on_error to prevent list('abc') issue."""
+    with pytest.raises(TypeError, match="str/bytes are not accepted"):
+        ErrorBoundary(on_error="not-a-hook", fallback="error")  # type: ignore[arg-type]
+
+
+def test_on_error_rejects_bytes_iterable() -> None:
+    """Test that bytes is rejected as on_error."""
+    with pytest.raises(TypeError, match="str/bytes are not accepted"):
+        ErrorBoundary(on_error=b"not-a-hook", fallback="error")  # type: ignore[arg-type]
+
+
+def test_on_error_rejects_noncallable_in_iterable() -> None:
+    """Test that non-callable elements in iterable are detected."""
+    with pytest.raises(TypeError, match=r"on_error\[1\] is not callable: 123"):
+        ErrorBoundary(on_error=[lambda _: None, 123], fallback="error")  # type: ignore[list-item]
+
+
+def test_on_error_rejects_non_iterable() -> None:
+    """Test that non-iterable, non-callable on_error is rejected."""
+    with pytest.raises(TypeError, match="must be callable or an iterable"):
+        ErrorBoundary(on_error=123, fallback="error")  # type: ignore[arg-type]
+
+
+def test_fallback_rejects_invalid_type() -> None:
+    """Test that fallback rejects non-str, non-callable values."""
+    with pytest.raises(TypeError, match="fallback must be either a string or a callable"):
+        ErrorBoundary(on_error=lambda _: None, fallback=123)  # type: ignore[arg-type]
+
+
+def test_on_error_accepts_empty_iterable() -> None:
+    """Test that empty iterable is accepted for on_error."""
+    # Should not raise TypeError
+    boundary = ErrorBoundary(on_error=[], fallback="error")
+
+    # Verify it works by decorating a function
+    @boundary.decorate
+    def boom() -> None:
+        msg = "error"
+        raise RuntimeError(msg)
+
+    # Should execute without errors (no hooks to call)
+    boom()
+
+
+def test_on_error_accepts_generator() -> None:
+    """Test that generator expressions are accepted for on_error."""
+    called: list[str] = []
+
+    def hook1(_: Exception) -> None:
+        called.append("hook1")
+
+    def hook2(_: Exception) -> None:
+        called.append("hook2")
+
+    # Use generator expression
+    hooks = (h for h in [hook1, hook2])
+    boundary = ErrorBoundary(on_error=hooks, fallback="error")
+
+    @boundary.decorate
+    def boom() -> None:
+        msg = "error"
+        raise RuntimeError(msg)
+
+    boom()
+    # Verify both hooks were called
+    assert called == ["hook1", "hook2"]
