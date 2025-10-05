@@ -1,6 +1,6 @@
 [project]
 name = "st-error-boundary"
-version = "0.1.1"
+version = "0.1.2"
 description = "A tiny, typed error-boundary decorator for Streamlit apps (UI-safe fallback + pluggable hooks)"
 readme = "README.md"
 requires-python = ">=3.12"
