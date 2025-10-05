@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from collections.abc import Callable, Iterable, Sequence
 from functools import wraps
-from typing import Protocol
+from typing import Protocol, cast
 
 from .plugins import render_string_fallback
 
@@ -67,16 +67,50 @@ class ErrorBoundary:
             on_error: Single hook or iterable of hooks. str/bytes are rejected.
             fallback: String or custom renderer for fallback UI.
 
-        """
-        # Filter out str/bytes from Iterable before list conversion
-        if callable(on_error):
-            self._hooks: Sequence[ErrorHook] = [on_error]
-        else:
-            # on_error is Iterable[ErrorHook] - just convert to list
-            # str/bytes would be rejected by type checker
-            self._hooks = list(on_error)
+        Raises:
+            TypeError: If on_error is str/bytes, or contains non-callable elements,
+                or if fallback is neither str nor callable.
 
-        self._fallback = fallback
+        """
+        self._hooks = self._normalize_hooks(on_error)
+        self._fallback = self._normalize_fallback(fallback)
+
+    @staticmethod
+    def _normalize_hooks(on_error: object) -> Sequence[ErrorHook]:
+        """Normalize hook input into a validated sequence."""
+        if isinstance(on_error, (str, bytes)):
+            msg = "on_error must be a hook or an iterable of hooks; str/bytes are not accepted."
+            raise TypeError(msg)
+
+        if callable(on_error):
+            return (cast("ErrorHook", on_error),)
+
+        if not isinstance(on_error, Iterable):
+            msg = "on_error must be callable or an iterable of callables."
+            raise TypeError(msg)
+
+        iterable_hooks = cast("Iterable[object]", on_error)
+
+        validated: list[ErrorHook] = []
+        for index, hook in enumerate(iterable_hooks):
+            if not callable(hook):
+                msg = f"on_error[{index}] is not callable: {hook!r}"
+                raise TypeError(msg)
+            validated.append(cast("ErrorHook", hook))
+
+        return tuple(validated)
+
+    @staticmethod
+    def _normalize_fallback(fallback: object) -> str | FallbackRenderer:
+        """Normalize fallback into a validated handler."""
+        if isinstance(fallback, str):
+            return fallback
+
+        if callable(fallback):
+            return cast("FallbackRenderer", fallback)
+
+        msg = "fallback must be either a string or a callable (FallbackRenderer)."
+        raise TypeError(msg)
 
     def _handle_error(self, exc: Exception) -> None:
         """Execute hooks and render fallback UI for an exception.
