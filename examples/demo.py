@@ -50,7 +50,6 @@ def store_callback_error(exc: Exception) -> None:
 
 def silent_callback_fallback(_: Exception) -> None:
     """Don't render UI here - defer to main script."""
-    pass
 
 
 def store_direct_error(exc: Exception) -> None:
@@ -58,14 +57,19 @@ def store_direct_error(exc: Exception) -> None:
     st.session_state.direct_error = str(exc)
 
 
-boundary_deferred = ErrorBoundary(
-    on_error=store_callback_error, fallback=silent_callback_fallback
-)
+def _raise_direct_error() -> None:
+    """Helper to raise direct error."""
+    msg = "ERROR FROM DIRECT"
+    raise ValueError(msg)
+
+
+boundary_deferred = ErrorBoundary(on_error=store_callback_error, fallback=silent_callback_fallback)
 
 
 def trigger_deferred_callback() -> None:
     """Callback that raises an error for deferred rendering."""
-    raise ValueError("ERROR FROM CALLBACK")
+    msg = "ERROR FROM CALLBACK"
+    raise ValueError(msg)
 
 
 # ============================================================================
@@ -121,8 +125,8 @@ def main() -> None:
         st.subheader("Direct Error")
         if st.button("Trigger Deferred Direct Error"):
             try:
-                raise ValueError("ERROR FROM DIRECT")
-            except Exception as exc:
+                _raise_direct_error()
+            except ValueError as exc:
                 store_direct_error(exc)
 
         # Render direct error after the button
