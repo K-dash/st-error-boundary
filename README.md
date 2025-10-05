@@ -15,7 +15,7 @@ This pattern is extracted from production use and open-sourced to help others bu
 ## Features
 
 - **Minimal API**: Just two required arguments (`on_error` and `fallback`)
-- **Type-safe**: Full Python 3.12+ type hints with strict mypy/pyright checking
+- **PEP 561 Compatible**: Ships with `py.typed` for full type checker support
 - **Callback Protection**: Protect both decorated functions and widget callbacks (`on_click`, `on_change`, etc.)
 - **Pluggable Hooks**: Execute side effects (audit logging, metrics, notifications) when errors occur
 - **Safe Fallback UI**: Display user-friendly error messages instead of tracebacks

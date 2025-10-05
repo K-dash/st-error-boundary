@@ -18,6 +18,10 @@ Repository = "https://github.com/K-dash/st-error-boundary"
 requires = ["hatchling>=1.25"]
 build-backend = "hatchling.build"
 
+[tool.hatch.build.targets.wheel]
+packages = ["src/st_error_boundary"]
+# Include py.typed for PEP 561 support (type checkers will recognize this package)
+include = ["src/st_error_boundary/py.typed"]
 
 [tool.ruff]
 target-version = "py312"
