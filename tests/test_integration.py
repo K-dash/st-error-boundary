@@ -309,3 +309,107 @@ main()
     # Fallback should still render despite hook failure
     assert len(at.error) == 1
     assert at.error[0].value == "Main error handled"
+
+
+def test_wrap_callback_with_on_change() -> None:
+    """Test that wrap_callback works with on_change callbacks."""
+    script = """
+import streamlit as st
+from st_error_boundary import ErrorBoundary
+
+if "error_caught" not in st.session_state:
+    st.session_state.error_caught = False
+
+def handle_change() -> None:
+    # This will raise an error
+    _ = 1 / 0
+
+boundary = ErrorBoundary(
+    on_error=lambda _: st.session_state.update(error_caught=True),
+    fallback="Error in on_change callback"
+)
+
+@boundary.decorate
+def main() -> None:
+    st.title("Test on_change")
+
+    # Use text_input with on_change
+    st.text_input(
+        "Enter text",
+        key="test_input",
+        on_change=boundary.wrap_callback(handle_change)
+    )
+
+    st.write(f"Error caught: {st.session_state.error_caught}")
+
+main()
+"""
+
+    at = AppTest.from_string(script)
+    at.run()
+
+    # Initially no error
+    assert at.session_state.error_caught is False
+    assert len(at.error) == 0
+
+    # Change text input to trigger on_change
+    at.text_input[0].input("test").run()
+
+    # Error should be caught by wrap_callback
+    assert at.session_state.error_caught is True
+    assert len(at.error) == 1  # type: ignore[unreachable]
+    assert at.error[0].value == "Error in on_change callback"
+
+
+def test_wrap_callback_with_selectbox_on_change() -> None:
+    """Test that wrap_callback works with selectbox on_change."""
+    script = """
+import streamlit as st
+from st_error_boundary import ErrorBoundary
+
+if "callback_executed" not in st.session_state:
+    st.session_state.callback_executed = False
+if "error_message" not in st.session_state:
+    st.session_state.error_message = ""
+
+def handle_selection_change() -> None:
+    st.session_state.callback_executed = True
+    raise ValueError("Selection error")
+
+boundary = ErrorBoundary(
+    on_error=lambda exc: st.session_state.update(error_message=str(exc)),
+    fallback="Error handling selection"
+)
+
+@boundary.decorate
+def main() -> None:
+    st.title("Test selectbox on_change")
+
+    st.selectbox(
+        "Choose option",
+        options=["A", "B", "C"],
+        key="selection",
+        on_change=boundary.wrap_callback(handle_selection_change)
+    )
+
+    st.write(f"Callback executed: {st.session_state.callback_executed}")
+    st.write(f"Error: {st.session_state.error_message}")
+
+main()
+"""
+
+    at = AppTest.from_string(script)
+    at.run()
+
+    # Initially no error
+    assert at.session_state.callback_executed is False
+    assert at.session_state.error_message == ""
+
+    # Change selection to trigger on_change
+    at.selectbox[0].select("B").run()
+
+    # Callback should have executed and error caught
+    assert at.session_state.callback_executed is True
+    assert at.session_state.error_message == "Selection error"  # type: ignore[unreachable]
+    assert len(at.error) == 1
+    assert at.error[0].value == "Error handling selection"
