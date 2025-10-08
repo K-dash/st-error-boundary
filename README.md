@@ -1,5 +1,6 @@
 [![PyPI version](https://img.shields.io/pypi/v/st-error-boundary.svg)](https://pypi.org/project/st-error-boundary/)
 [![Python versions](https://img.shields.io/pypi/pyversions/st-error-boundary.svg)](https://pypi.org/project/st-error-boundary/)
+[![PyPI Downloads](https://static.pepy.tech/personalized-badge/st-error-boundary?period=total&units=INTERNATIONAL_SYSTEM&left_color=GREY&right_color=BLUE&left_text=downloads)](https://pepy.tech/projects/st-error-boundary)
 [![CI](https://github.com/K-dash/st-error-boundary/actions/workflows/ci.yml/badge.svg)](https://github.com/K-dash/st-error-boundary/actions/workflows/ci.yml)
 [![codecov](https://codecov.io/gh/K-dash/st-error-boundary/branch/feat%2Frelease-0.1.4/graph/badge.svg?token=nhDsSbTkaJ)](https://codecov.io/gh/K-dash/st-error-boundary)
 
