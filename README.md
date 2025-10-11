@@ -309,6 +309,9 @@ See [`tests/test_integration.py`](tests/test_integration.py) for implementation 
 # Install dependencies
 make install
 
+# Install pre-commit hooks (recommended)
+make install-hooks
+
 # Run linting and type checking
 make
 
@@ -320,6 +323,33 @@ make example
 
 # Run demo
 make demo
+```
+
+### Pre-commit Hooks
+
+This project uses [pre-commit](https://pre-commit.com/) to automatically run code quality checks before each commit:
+
+- **Code Formatting**: ruff format
+- **Linting**: ruff check
+- **Type Checking**: mypy and pyright
+- **Tests**: pytest
+- **Other Checks**: trailing whitespace, end-of-file, YAML/TOML validation
+
+**Setup:**
+
+```bash
+# Install pre-commit hooks (one-time setup)
+make install-hooks
+```
+
+After installation, the hooks will run automatically on `git commit`. To run manually:
+
+```bash
+# Run on all files
+uv run pre-commit run --all-files
+
+# Skip hooks for a specific commit (not recommended)
+git commit --no-verify
 ```
 
 ## License
