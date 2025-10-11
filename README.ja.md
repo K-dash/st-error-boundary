@@ -230,6 +230,74 @@ if st.session_state.error:
 
 詳細については、[コールバックレンダリング位置ガイド](docs/callback-rendering-position.md)を参照してください。
 
+### ネストされた ErrorBoundary の動作
+
+`ErrorBoundary` インスタンスがネストされている（階層的な）場合、以下のルールが適用されます：
+
+1. **内側の boundary が最初に処理**（ファーストマッチの原則）
+    - 例外をキャッチした最も内側の boundary が処理します。
+
+2. **内側のフックのみ実行**
+    - 内側の boundary が例外を処理する場合、**内側の boundary のフックのみが呼ばれます**。外側の boundary のフックは実行されません。
+
+3. **fallback の例外はバブルアップ**
+    - 内側の boundary の fallback が例外を raise した場合、その例外は外側の boundary に伝播します。外側の boundary がそれを処理します（設計上、fallback のバグは静かに無視されません）。
+
+4. **制御フロー例外は素通り**
+    - Streamlit の制御フロー例外（`st.rerun()`、`st.stop()`）は、**すべて**の boundary を通過してキャッチされません。
+
+5. **コールバックにも同じルール**
+    - `wrap_callback()` も同じネストルールに従います。コールバックをラップしている最も内側の boundary が例外を処理します。
+
+#### 例: 内側の Boundary が処理
+
+```python
+outer = ErrorBoundary(on_error=outer_hook, fallback="OUTER")
+inner = ErrorBoundary(on_error=inner_hook, fallback="INNER")
+
+@outer.decorate
+def main():
+    @inner.decorate
+    def section():
+        raise ValueError("boom")
+    section()
+```
+
+**結果**:
+- `INNER` fallback が表示されます
+- `inner_hook` のみが呼ばれます（`outer_hook` は呼ばれません）
+
+#### 例: Fallback の例外がバブルアップ
+
+```python
+def bad_fallback(exc: Exception):
+    raise RuntimeError("fallback failed")
+
+outer = ErrorBoundary(on_error=outer_hook, fallback="OUTER")
+inner = ErrorBoundary(on_error=inner_hook, fallback=bad_fallback)
+
+@outer.decorate
+def main():
+    @inner.decorate
+    def section():
+        raise ValueError("boom")
+    section()
+```
+
+**結果**:
+- `OUTER` fallback が表示されます（内側の fallback が例外を raise）
+- `inner_hook` と `outer_hook` の両方が呼ばれます（inner が先、次に outer）
+
+#### ベストプラクティス
+
+- **内側の fallback**: UI をレンダリングして終了する（raise しない）。これによりエラーが分離されます。
+- **外側の fallback**: 特定のエラーを外側の boundary に処理させたい場合は、内側の fallback から明示的に `raise` してください。
+
+#### テストカバレッジ
+
+すべてのネストされた boundary の動作は自動テストで検証されています。
+実装の詳細については、[`tests/test_integration.py`](tests/test_integration.py) を参照してください。
+
 ## 開発
 
 ```bash

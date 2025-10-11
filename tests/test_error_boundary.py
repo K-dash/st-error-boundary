@@ -384,3 +384,146 @@ def test_on_error_accepts_generator() -> None:
     boom()
     # Verify both hooks were called
     assert called == ["hook1", "hook2"]
+
+
+# ============================================================================
+# Control flow exception tests
+# ============================================================================
+
+
+def test_unknown_baseexception_is_reraised_in_decorate() -> None:
+    """Test that unknown BaseException is re-raised without handling."""
+
+    class UnknownBaseException(BaseException):
+        """Custom BaseException for testing."""
+
+    boundary = ErrorBoundary(on_error=lambda _: None, fallback="error")
+
+    @boundary.decorate
+    def raise_unknown_baseexception() -> None:
+        msg = "test"
+        raise UnknownBaseException(msg)
+
+    # Unknown BaseException should be re-raised
+    with pytest.raises(UnknownBaseException):
+        raise_unknown_baseexception()
+
+
+def test_unknown_baseexception_is_reraised_in_callback() -> None:
+    """Test that unknown BaseException is re-raised in callbacks."""
+
+    class UnknownBaseException(BaseException):
+        """Custom BaseException for testing."""
+
+    boundary = ErrorBoundary(on_error=lambda _: None, fallback="error")
+
+    def callback() -> None:
+        msg = "test"
+        raise UnknownBaseException(msg)
+
+    wrapped = boundary.wrap_callback(callback)
+
+    # Unknown BaseException should be re-raised
+    with pytest.raises(UnknownBaseException):
+        wrapped()
+
+
+def test_unknown_baseexception_does_not_call_hook() -> None:
+    """Test that hooks are not called for unknown BaseException."""
+    hook_called: list[bool] = []
+
+    class UnknownBaseException(BaseException):
+        """Custom BaseException for testing."""
+
+    def hook(_: Exception) -> None:
+        hook_called.append(True)
+
+    boundary = ErrorBoundary(on_error=hook, fallback="error")
+
+    @boundary.decorate
+    def raise_unknown_baseexception() -> None:
+        msg = "test"
+        raise UnknownBaseException(msg)
+
+    # Unknown BaseException should be re-raised without calling hooks
+    with pytest.raises(UnknownBaseException):
+        raise_unknown_baseexception()
+
+    # Hook should not have been called
+    assert hook_called == []
+
+
+def test_hook_raising_baseexception_is_propagated() -> None:
+    """Test that BaseException raised in hook is propagated (not suppressed).
+
+    Hooks that raise Exception are suppressed to prevent cascading errors,
+    but BaseException (like SystemExit) should propagate to allow proper
+    application shutdown.
+    """
+
+    def hook_raises_systemexit(_: Exception) -> None:
+        raise SystemExit(0)
+
+    boundary = ErrorBoundary(on_error=hook_raises_systemexit, fallback="error")
+
+    @boundary.decorate
+    def boom() -> None:
+        msg = "error"
+        raise RuntimeError(msg)
+
+    # SystemExit from hook should propagate
+    with pytest.raises(SystemExit):
+        boom()
+
+
+def test_fallback_exception_is_propagated() -> None:
+    """Test that exceptions in fallback renderer are propagated (not suppressed).
+
+    This ensures that bugs in fallback UI code are not silently ignored.
+    """
+
+    def bad_fallback(_: Exception) -> None:
+        msg = "fallback failed"
+        raise RuntimeError(msg)
+
+    boundary = ErrorBoundary(on_error=lambda _: None, fallback=bad_fallback)
+
+    @boundary.decorate
+    def boom() -> None:
+        msg = "original error"
+        raise ValueError(msg)
+
+    # RuntimeError from fallback should propagate
+    with pytest.raises(RuntimeError, match="fallback failed"):
+        boom()
+
+
+def test_passthrough_without_internal_import(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Test that control flow exceptions pass through even if import fails.
+
+    If _is_streamlit_control_flow returns False (e.g., due to import failure),
+    control flow exceptions should still be re-raised via the "unknown BaseException"
+    path, ensuring st.rerun()/st.stop() don't break.
+    """
+
+    # Get the actual module object (not the function with the same name)
+    eb_module = sys.modules["st_error_boundary.error_boundary"]
+
+    # Simulate import failure - _is_streamlit_control_flow always returns False
+    def always_false(_exc: BaseException) -> bool:
+        return False
+
+    monkeypatch.setattr(eb_module, "_is_streamlit_control_flow", always_false)
+
+    class ControlFlowException(BaseException):
+        """Simulates a control flow exception like RerunException."""
+
+    boundary = ErrorBoundary(on_error=lambda _: None, fallback="error")
+
+    @boundary.decorate
+    def raise_control_flow() -> None:
+        raise ControlFlowException
+
+    # Control flow exception should still be re-raised via unknown BaseException path
+    with pytest.raises(ControlFlowException):
+        raise_control_flow()

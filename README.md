@@ -2,7 +2,7 @@
 [![Python versions](https://img.shields.io/pypi/pyversions/st-error-boundary.svg)](https://pypi.org/project/st-error-boundary/)
 [![PyPI Downloads](https://static.pepy.tech/personalized-badge/st-error-boundary?period=total&units=INTERNATIONAL_SYSTEM&left_color=GREY&right_color=BLUE&left_text=downloads)](https://pepy.tech/projects/st-error-boundary)
 [![CI](https://github.com/K-dash/st-error-boundary/actions/workflows/ci.yml/badge.svg)](https://github.com/K-dash/st-error-boundary/actions/workflows/ci.yml)
-[![codecov](https://codecov.io/gh/K-dash/st-error-boundary/branch/feat%2Frelease-0.1.4/graph/badge.svg?token=nhDsSbTkaJ)](https://codecov.io/gh/K-dash/st-error-boundary)
+[![codecov](https://codecov.io/gh/K-dash/st-error-boundary/graph/badge.svg?token=nhDsSbTkaJ)](https://codecov.io/gh/K-dash/st-error-boundary)
 
 # st-error-boundary
 
@@ -234,6 +234,74 @@ if st.session_state.error:
 **Result**: Error appears **below the button** instead of at the top.
 
 For more details, see [Callback Rendering Position Guide](docs/callback-rendering-position.md).
+
+### Nested ErrorBoundary Behavior
+
+When `ErrorBoundary` instances are nested (hierarchical), the following rules apply:
+
+1. **Inner boundary handles first** (first-match wins)
+    - The innermost boundary that catches the exception handles it.
+
+2. **Only inner hooks execute**
+    - When the inner boundary handles an exception, **only the inner boundary's hooks are called**. Outer boundary hooks are NOT executed.
+
+3. **Fallback exceptions bubble up**
+    - If the inner boundary's fallback raises an exception, that exception propagates to the outer boundary. The outer boundary then handles it (by design, fallback bugs are not silently ignored).
+
+4. **Control flow exceptions pass through**
+    - Streamlit control flow exceptions (`st.rerun()`, `st.stop()`) pass through **all** boundaries without being caught.
+
+5. **Same rules for callbacks**
+    - `wrap_callback()` follows the same nesting rules—the innermost boundary wrapping the callback handles exceptions.
+
+#### Example: Inner Boundary Handles
+
+```python
+outer = ErrorBoundary(on_error=outer_hook, fallback="OUTER")
+inner = ErrorBoundary(on_error=inner_hook, fallback="INNER")
+
+@outer.decorate
+def main():
+    @inner.decorate
+    def section():
+        raise ValueError("boom")
+    section()
+```
+
+**Result**:
+- `INNER` fallback is displayed
+- Only `inner_hook` is called (not `outer_hook`)
+
+#### Example: Fallback Exception Bubbles
+
+```python
+def bad_fallback(exc: Exception):
+    raise RuntimeError("fallback failed")
+
+outer = ErrorBoundary(on_error=outer_hook, fallback="OUTER")
+inner = ErrorBoundary(on_error=inner_hook, fallback=bad_fallback)
+
+@outer.decorate
+def main():
+    @inner.decorate
+    def section():
+        raise ValueError("boom")
+    section()
+```
+
+**Result**:
+- `OUTER` fallback is displayed (inner fallback raised exception)
+- Both `inner_hook` and `outer_hook` are called (inner first, then outer)
+
+#### Best Practice
+
+- **Inner fallback**: Render UI and finish (don't raise). This keeps errors isolated.
+- **Outer fallback**: If you want outer boundaries to handle certain errors, explicitly `raise` from the inner fallback.
+
+#### Test Coverage
+
+All nested boundary behaviors are verified by automated tests.
+See [`tests/test_integration.py`](tests/test_integration.py) for implementation details.
 
 ## Development
 
