@@ -317,6 +317,9 @@ make test
 
 # Run example app
 make example
+
+# Run demo
+make demo
 ```
 
 ## License
