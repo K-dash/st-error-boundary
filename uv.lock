@@ -1006,7 +1006,7 @@ dev = [
 ]
 
 [package.metadata]
-requires-dist = [{ name = "streamlit", specifier = ">=1.30" }]
+requires-dist = [{ name = "streamlit", specifier = ">=1.50" }]
 
 [package.metadata.requires-dev]
 dev = [

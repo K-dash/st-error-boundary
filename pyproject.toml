@@ -17,7 +17,7 @@ classifiers = [
     "Typing :: Typed",
 ]
 dependencies = [
-    "streamlit>=1.30",
+    "streamlit>=1.50",
 ]
 
 [project.urls]
@@ -55,7 +55,7 @@ ignore = [
 "main.py" = ["D", "T201"]  # Skip docstrings and print in main.py
 
 [tool.mypy]
-python_version = "3.12"
+python_version = "3.13"
 strict = true
 warn_unreachable = true
 warn_unused_ignores = true
@@ -63,7 +63,7 @@ mypy_path = ["src"]
 
 [tool.pyright]
 typeCheckingMode = "strict"
-pythonVersion = "3.12"
+pythonVersion = "3.13"
 venvPath = "."
 include = ["src", "tests", "examples"]
 
