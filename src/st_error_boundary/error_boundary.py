@@ -9,6 +9,45 @@ from typing import Protocol, cast
 from .plugins import render_string_fallback
 
 
+def _is_streamlit_control_flow(exc: BaseException) -> bool:
+    """Return True if exc is Streamlit's control-flow exception.
+
+    Streamlit uses RerunException and StopException for st.rerun() and st.stop().
+    These must be allowed to propagate to work correctly.
+
+    Args:
+        exc: Exception to check.
+
+    Returns:
+        True if the exception is a Streamlit control flow exception.
+
+    """
+    try:
+        # v1.3x+ stable import path
+        from streamlit.runtime.scriptrunner_utils.exceptions import (  # noqa: PLC0415
+            RerunException,
+            StopException,
+        )
+
+        return isinstance(exc, (RerunException, StopException))
+    except Exception:  # noqa: BLE001
+        # Older Streamlit versions or import failures - fail safe
+        return False
+
+
+def _should_passthrough(exc: BaseException) -> bool:
+    """Return True if exception should pass through without handling.
+
+    Args:
+        exc: Exception to check.
+
+    Returns:
+        True if the exception should be re-raised without handling.
+
+    """
+    return isinstance(exc, (KeyboardInterrupt, SystemExit)) or _is_streamlit_control_flow(exc)
+
+
 class ErrorHook(Protocol):
     """Protocol for error hooks that execute side effects on exceptions.
 
@@ -149,11 +188,16 @@ class ErrorBoundary:
         def _wrapped(*args: P.args, **kwargs: P.kwargs) -> R | None:
             try:
                 return func(*args, **kwargs)
-            except (KeyboardInterrupt, SystemExit):
-                raise  # Pass through BaseException
-            except Exception as exc:  # noqa: BLE001
-                self._handle_error(exc)
-                return None
+            except BaseException as exc:
+                # Pass through control flow exceptions
+                if _should_passthrough(exc):
+                    raise
+                # Handle normal exceptions only
+                if isinstance(exc, Exception):
+                    self._handle_error(exc)
+                    return None
+                # Unknown BaseException - re-raise for safety
+                raise
 
         return _wrapped
 
@@ -177,11 +221,16 @@ class ErrorBoundary:
         def _wrapped(*args: P.args, **kwargs: P.kwargs) -> R | None:
             try:
                 return callback(*args, **kwargs)  # Return original value
-            except (KeyboardInterrupt, SystemExit):
-                raise  # Pass through BaseException
-            except Exception as exc:  # noqa: BLE001
-                self._handle_error(exc)
-                return None  # Only None on exception
+            except BaseException as exc:
+                # Pass through control flow exceptions
+                if _should_passthrough(exc):
+                    raise
+                # Handle normal exceptions only
+                if isinstance(exc, Exception):
+                    self._handle_error(exc)
+                    return None  # Only None on exception
+                # Unknown BaseException - re-raise for safety
+                raise
 
         return _wrapped
 
