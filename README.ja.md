@@ -118,6 +118,84 @@ if __name__ == "__main__":
     main()
 ```
 
+## 従来パターンとの対比（try/except を書かない）
+
+### 従来: 画面ごとに try/except と `st.error()` / `st.stop()` を散りばめる
+
+```python
+from __future__ import annotations
+import streamlit as st
+
+def save_profile(name: str) -> None:
+    if not name:
+        raise ValueError("名前は必須です")
+    # …永続化…
+
+def main() -> None:
+    st.title("プロフィール")
+    name: str = st.text_input("名前", "")
+    if st.button("保存"):
+        try:
+            save_profile(name)
+            st.success("保存しました")
+        except ValueError as exc:
+            st.error(f"入力エラー: {exc}")
+            st.stop()  # エラー後のUI崩れを防ぐため停止
+
+if __name__ == "__main__":
+    main()
+```
+
+* 課題: 例外処理が**重複・散在**し、**書き忘れのリスク**や可読性低下を招く。横断関心事がドメインロジックに漏れ込みがち。
+
+### ErrorBoundary: 呼び出し側は **raise するだけ**（UI表示と副作用は境界に集約）
+
+```python
+from __future__ import annotations
+import streamlit as st
+from st_error_boundary import ErrorBoundary
+
+def audit_log(exc: Exception) -> None:
+    # 監査ログやメトリクス送信
+    print(f"[audit] {exc!r}")
+
+def fallback_ui(exc: Exception) -> None:
+    st.error("予期しないエラーが発生しました。時間をおいて再度お試しください。")
+    if st.button("リトライ"):
+        st.rerun()
+
+boundary: ErrorBoundary = ErrorBoundary(
+    on_error=audit_log,
+    fallback=fallback_ui,  # 文字列も可（内部で st.error() により描画）
+)
+
+def save_profile(name: str) -> None:
+    if not name:
+        raise ValueError("名前は必須です")
+    # …永続化…
+
+@boundary.decorate
+def main() -> None:
+    st.title("プロフィール")
+    name: str = st.text_input("名前", "")
+    if st.button("保存"):
+        # ここでは try/except を書かず、ドメイン例外は raise で OK
+        save_profile(name)
+
+if __name__ == "__main__":
+    main()
+```
+
+* **利点**: エラー UI とフックを**一箇所に集約**でき、main 関数内のロジックをクリーンに保てる。`fallback` が文字列なら内部で `st.error()` により描画（自由な UI はコール可能を渡す）
+* コールバック（`on_click` / `on_change`）はデコレータの外で実行されるため、**`boundary.wrap_callback(...)` で明示的にラップ**する。
+* `st.rerun()` / `st.stop()` のような**制御用の例外は素通し**される。意図した制御では引き続き使用できる（エラー処理のボイラープレートとして `st.stop()` を書く必要はない）
+
+### それでもローカルの try/except を残すべき場面
+
+* **その場で回復**したい（例: 入力補正して処理続行）。
+* **特定の例外だけ別 UI** を出したいなど、**細粒度の分岐 UI** が要る。
+* 外部 API の**ローカルリトライ**を実装し、例外を握りつぶして再処理する設計上の意図がある。
+
 ## ErrorBoundaryクラスが必要な理由
 
 Streamlitは、`on_click`や`on_change`で指定されたコールバック関数をスクリプトが再実行される**前**に実行します。

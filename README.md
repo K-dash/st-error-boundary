@@ -107,6 +107,84 @@ if __name__ == "__main__":
     main()
 ```
 
+## Comparison: Traditional try/except vs ErrorBoundary (raise-only)
+
+### Traditional: scatter try/except + `st.error()` / `st.stop()` in each screen
+
+```python
+from __future__ import annotations
+import streamlit as st
+
+def save_profile(name: str) -> None:
+    if not name:
+        raise ValueError("Name is required")
+    # ... persist ...
+
+def main() -> None:
+    st.title("Profile")
+    name: str = st.text_input("Name", "")
+    if st.button("Save"):
+        try:
+            save_profile(name)
+            st.success("Saved!")
+        except ValueError as exc:
+            st.error(f"Input error: {exc}")
+            st.stop()  # stop to avoid broken UI after errors
+
+if __name__ == "__main__":
+    main()
+```
+
+* Drawbacks: exception handling is **duplicated and easy to forget**, readability suffers, and a cross-cutting concern leaks into business logic.
+
+### ErrorBoundary: just **raise**, and let the boundary handle UI + hooks
+
+```python
+from __future__ import annotations
+import streamlit as st
+from st_error_boundary import ErrorBoundary
+
+def audit_log(exc: Exception) -> None:
+    # send to your telemetry/metrics
+    print(f"[audit] {exc!r}")
+
+def fallback_ui(exc: Exception) -> None:
+    st.error("An unexpected error occurred. Please try again later.")
+    if st.button("Retry"):
+        st.rerun()
+
+boundary: ErrorBoundary = ErrorBoundary(
+    on_error=audit_log,
+    fallback=fallback_ui,  # string is also allowed; it is rendered via st.error() internally
+)
+
+def save_profile(name: str) -> None:
+    if not name:
+        raise ValueError("Name is required")
+    # ... persist ...
+
+@boundary.decorate
+def main() -> None:
+    st.title("Profile")
+    name: str = st.text_input("Name", "")
+    if st.button("Save"):
+        # No local try/except: domain errors bubble to the boundary
+        save_profile(name)
+
+if __name__ == "__main__":
+    main()
+```
+
+* Benefits: **single place** for error UI and side effects; business code stays clean. When `fallback` is a string, it is shown with `st.error()` internally (use a callable for custom UI).
+* Callbacks (`on_click` / `on_change`) run outside the decorated scope—wrap them with `boundary.wrap_callback(...)`.
+* Control-flow exceptions (`st.rerun()`, `st.stop()`) **pass through** boundaries; keep using them intentionally as needed (you don't need `st.stop()` as error handling boilerplate).
+
+### When to still use local try/except
+
+* You want to **recover inline** (e.g., fix input and continue).
+* You need **fine-grained branching UI** for a specific, expected exception.
+* You implement a **local retry** for an external API and intentionally swallow the exception.
+
 ## Why ErrorBoundary Class?
 
 Streamlit executes `on_click` and `on_change` callbacks **before** the script reruns, meaning they run **outside** the decorated function's scope. This is why `@boundary.decorate` alone cannot catch callback errors.
