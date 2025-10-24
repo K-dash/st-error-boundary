@@ -1005,7 +1005,7 @@ wheels = [
 
 [[package]]
 name = "st-error-boundary"
-version = "0.1.7"
+version = "0.1.8"
 source = { editable = "." }
 dependencies = [
     { name = "streamlit" },
